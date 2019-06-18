@@ -2,6 +2,7 @@
 #include "json.h"
 #include "midi.h"
 #include <string>
+#include <sstream>
 
 
 std::string getStringData( const midi_event_t & p_midi_event );
@@ -12,6 +13,14 @@ int main( int argc, char ** argv )
 {
     midi_t * t_midi;
     ws_core::node * json;
+    FILE * t_outFile;
+    const char * t_filePath;
+    const char * t_fileName;
+    int t_pathLength, n;
+    std::string t_jsonStr;
+    std::stringstream t_outFileNameSStr;
+
+    char t_fileNameBuff[1024];
     
     unsigned short i;
     
@@ -23,14 +32,64 @@ int main( int argc, char ** argv )
     
     for( i = 1; i < argc; ++i )
     {
-        parse_midi( &t_midi, argv[i] );
-        json = ws_core::create_json_node( ws_core::OBJECT );
+        t_filePath = argv[i];
+        parse_midi( &t_midi, t_filePath );
         
-        convertMidi2Json( t_midi, json );
+        do{
 
-        debug() << "json: " << json->to_string() << std::endl;
+            if( strncmp( t_midi->head, "MThd", 4 ) )
+            {
+                debug( t_filePath << " not is midi" )
+                break;
+            }
 
-        ws_core::free_json_node( &json );
+            t_pathLength = strlen( t_filePath );
+
+            for( n = t_pathLength; ; --n )
+            {
+                if( t_filePath[n] == '/' || n == 0 )
+                {
+                    break;
+                }
+            }
+
+            t_fileName = t_filePath + n;
+
+
+            memset( t_fileNameBuff, 0, sizeof(t_fileNameBuff) );
+
+            t_pathLength = strlen( t_fileName );
+            for( n = 0; ; ++n )
+            {
+                if( t_filePath[n] == '.' || n >= t_pathLength - 1 )
+                {
+                    break;
+                }
+            }
+
+            memcpy( t_fileNameBuff, t_fileName, n );
+
+            t_outFileNameSStr << t_fileNameBuff << ".json";
+
+            json = ws_core::create_json_node( ws_core::OBJECT );
+            
+            convertMidi2Json( t_midi, json );
+
+            t_jsonStr = json->to_string();
+
+            t_outFile = fopen( t_outFileNameSStr.str().c_str(), "wr+" );
+
+            if( t_outFile )
+            {
+                fwrite( t_jsonStr.c_str(), t_jsonStr.size(), 1, t_outFile );
+                fclose( t_outFile );
+
+                info( "out file " << t_outFileNameSStr.str() );
+            }
+            
+            ws_core::free_json_node( &json );
+
+        }while(0);
         free_midi( &t_midi );
     }
     
@@ -62,11 +121,11 @@ void convertMidi2Json( midi_t * p_midi, ws_core::node * p_json )
     
     tracks = ws_core::create_json_node( ws_core::ARRAY );
 
-    printf( "----->> %s %d \r\n", p_midi->head, p_midi->size );
+    // printf( "----->> %s %d \r\n", p_midi->head, p_midi->size );
 
-    printf( "----->> type: %d \r\n", p_midi->type );
-    printf( "----->> track count: %d \r\n", p_midi->track_count );
-    printf( "----->> ticks: %d \r\n", p_midi->tick_count );
+    // printf( "----->> type: %d \r\n", p_midi->type );
+    // printf( "----->> track count: %d \r\n", p_midi->track_count );
+    // printf( "----->> ticks: %d \r\n", p_midi->tick_count );
 
     p_json->append( "tick", p_midi->tick_count );
     p_json->append( tracks->set_key( "tracks" ) );
@@ -123,10 +182,7 @@ void convertMidi2Json( midi_t * p_midi, ws_core::node * p_json )
                 }
             }
 
-            
-
-
-            printf( "---->>> track: %d delta: %x evnet: %x %x \r\n", i, t_midi_event.delta, t_midi_event.event, t_midi_event.data_size );
+            // printf( "---->>> track: %d delta: %x evnet: %x %x \r\n", i, t_midi_event.delta, t_midi_event.event, t_midi_event.data_size );
 
             if( t_midi_event.event == 0x2F )
             {

@@ -42,13 +42,13 @@ namespace ws_core
             break;
         }
 
-        t_sstr << "]";
+        t_sstr << "] ";
 
         if( p_log_level != INFO )
-        t_sstr << " " << p_line << " " << p_file << " " << p_function << " -" << std::endl;
+        t_sstr << p_line << " " << p_file << " " << p_function << " -" << std::endl;
 
         pthread_mutex_lock( &_WS_LOG::m_mutex );
-        *_WS_LOG::m_stream << std::endl << t_sstr.str();
+        *_WS_LOG::m_stream << t_sstr.str();
         pthread_mutex_unlock( &_WS_LOG::m_mutex );
 
         return *_WS_LOG::m_stream;
